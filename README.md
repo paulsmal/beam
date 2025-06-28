@@ -1,10 +1,10 @@
-# Beam Gemini
+# Beam
 
 A lightweight HTTP streaming proxy server built with Rust and Axum that enables real-time file streaming between upload and download clients.
 
 ## Overview
 
-Beam Gemini acts as a streaming bridge between clients, allowing one client to upload a file while another simultaneously downloads it. The server holds no persistent storage - it simply pipes data from uploader to downloader in real-time.
+Beam acts as a streaming bridge between clients, allowing one client to upload a file while another simultaneously downloads it. The server holds no persistent storage - it simply pipes data from uploader to downloader in real-time.
 
 ## Features
 
@@ -16,11 +16,12 @@ Beam Gemini acts as a streaming bridge between clients, allowing one client to u
 
 ## How It Works
 
-1. A download client initiates a GET request to `/{filename}`
-2. The server creates a channel and waits for an upload
-3. An upload client sends a PUT request to the same `/{filename}` endpoint
-4. The server pipes data from the upload stream directly to the download stream
-5. Once the upload completes or either client disconnects, the stream ends
+1. An upload client sends a PUT request to `/{filename}`
+2. The server creates a broadcast channel for streaming data
+3. The upload waits for a download client to connect
+4. A download client initiates a GET request to the same `/{filename}` endpoint
+5. The server pipes data from the upload stream directly to the download stream
+6. Once the upload completes or either client disconnects, the stream ends
 
 ## Installation
 
@@ -52,24 +53,24 @@ The server will start on `http://0.0.0.0:3000`
 ### API Endpoints
 
 #### Dashboard
-- **GET** `/` - Shows list of active streams waiting for upload
+- **GET** `/` - Shows list of active streams
 
 #### File Streaming
-- **GET** `/{filename}` - Initiate a download stream (waits for corresponding upload)
-- **PUT** `/{filename}` - Upload a file to stream to waiting download client
+- **PUT** `/{filename}` - Upload a file (waits for download client before streaming)
+- **GET** `/{filename}` - Download the streaming file
 
 ### Example Usage
 
 Using curl in two separate terminals:
 
-**Terminal 1 (Downloader):**
+**Terminal 1 (Uploader):**
 ```bash
-curl -O http://localhost:3000/myfile.zip
+curl -T myfile.zip http://localhost:3000/myfile.zip
 ```
 
-**Terminal 2 (Uploader):**
+**Terminal 2 (Downloader):**
 ```bash
-curl -X PUT --data-binary @myfile.zip http://localhost:3000/myfile.zip
+curl http://localhost:3000/myfile.zip > myfile.zip
 ```
 
 The file will stream directly from the uploader to the downloader.
@@ -79,22 +80,23 @@ The file will stream directly from the uploader to the downloader.
 The application uses:
 - **Axum**: Web framework for handling HTTP requests
 - **Tokio**: Async runtime for concurrent operations
-- **Channels**: MPSC channels for streaming data between upload and download handlers
-- **RwLock**: Thread-safe storage for managing active streams
+- **Broadcast channels**: For streaming data between upload and download handlers
+- **DashMap**: Thread-safe concurrent HashMap for managing active streams
 
 ## Configuration
 
 Currently, the server uses hardcoded configuration:
 - **Port**: 3000
 - **Host**: 0.0.0.0 (all interfaces)
-- **Channel buffer size**: 16 chunks
+- **Channel buffer size**: 1024 messages
 
 ## Limitations
 
 - No authentication or authorization
-- No persistent storage - if download client disconnects, upload must restart
-- One upload per filename at a time
+- No persistent storage - files only exist during active streaming
+- One upload per filename at a time (returns 409 Conflict for concurrent uploads)
 - No resume capability for interrupted transfers
+- Upload waits indefinitely for a download client to connect
 
 ## Development
 
