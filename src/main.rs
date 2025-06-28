@@ -1,4 +1,4 @@
-use beam_gemini::setup_server;
+use beam::setup_server;
 use tracing;
 
 #[tokio::main]

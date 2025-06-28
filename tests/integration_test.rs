@@ -1,5 +1,5 @@
 use anyhow::Result;
-use beam_gemini::setup_server_with_port;
+use beam::setup_server_with_port;
 use reqwest;
 use tokio;
 

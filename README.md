@@ -32,8 +32,8 @@ Beam Gemini acts as a streaming bridge between clients, allowing one client to u
 ### Building from source
 
 ```bash
-git clone https://github.com/yourusername/beam-gemini.git
-cd beam-gemini
+git clone https://github.com/yourusername/beam.git
+cd beam
 cargo build --release
 ```
 
@@ -44,7 +44,7 @@ cargo build --release
 ```bash
 cargo run
 # Or if built:
-./target/release/beam-gemini
+./target/release/beam
 ```
 
 The server will start on `http://0.0.0.0:3000`
