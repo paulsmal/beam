@@ -22,6 +22,7 @@ struct AppState {
     streams: Arc<RwLock<HashMap<FileId, StreamChannel>>>,
 }
 
+
 pub async fn setup_server() -> tokio::task::JoinHandle<()> {
     let state = AppState::default();
 
@@ -39,16 +40,6 @@ pub async fn setup_server() -> tokio::task::JoinHandle<()> {
         axum::serve(listener, app).await.unwrap();
     });
     handle
-}
-
-#[tokio::main]
-async fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
-
-    let server_handle = setup_server().await;
-    server_handle.await.unwrap();
 }
 
 async fn dashboard(State(state): State<AppState>) -> impl IntoResponse {
