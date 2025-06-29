@@ -1,7 +1,7 @@
 use axum::{
     body::{Body, Bytes},
     extract::{Path, State},
-    http::StatusCode,
+    http::{header, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Router,
@@ -83,6 +83,7 @@ async fn download_handler(
 
     Response::builder()
         .status(StatusCode::OK)
+        .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", filename))
         .body(Body::new(stream_body))
         .unwrap()
 }
@@ -95,14 +96,14 @@ async fn upload_handler(
     let (tx, rx) = mpsc::channel(16);
     let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
     let (complete_tx, complete_rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
-    
+
     // Store the receiver and ready signal
-    state.streams.write().await.insert(filename.clone(), StreamData { 
+    state.streams.write().await.insert(filename.clone(), StreamData {
         receiver: rx,
         ready_tx: Some(ready_tx),
     });
     tracing::info!(%filename, "Upload connection accepted. Waiting for download client.");
-    
+
     tokio::spawn(async move {
         // Wait for download client to connect
         match tokio::time::timeout(Duration::from_secs(300), ready_rx).await {
@@ -120,10 +121,10 @@ async fn upload_handler(
                 return;
             }
         }
-        
+
         // Now start reading the body
         let mut body_stream = BodyStream::new(body);
-        
+
         while let Some(chunk_result) = body_stream.next().await {
             match chunk_result {
                 Ok(frame) => {
