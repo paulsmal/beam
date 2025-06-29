@@ -1,5 +1,4 @@
 use beam::setup_server;
-use tracing;
 
 #[tokio::main]
 async fn main() {

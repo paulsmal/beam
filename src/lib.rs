@@ -12,7 +12,6 @@ use http_body_util::{BodyStream, StreamBody};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::ReceiverStream;
-use tracing;
 
 type FileId = String;
 
@@ -42,17 +41,17 @@ pub async fn setup_server_with_port(port: u16) -> tokio::task::JoinHandle<()> {
         )
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
     tracing::info!("Listening on {}", listener.local_addr().unwrap());
-    let handle = tokio::spawn(async move {
+    
+    tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
-    });
-    handle
+    })
 }
 
 async fn dashboard(State(state): State<AppState>) -> impl IntoResponse {
     let keys = state.streams.read().await.keys().cloned().collect::<Vec<_>>();
-    format!("Streams waiting for download: {:?}", keys)
+    format!("Streams waiting for download: {keys:?}")
 }
 
 async fn download_handler(
@@ -83,7 +82,7 @@ async fn download_handler(
 
     Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", filename))
+        .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{filename}\""))
         .body(Body::new(stream_body))
         .unwrap()
 }
@@ -136,7 +135,7 @@ async fn upload_handler(
                     }
                 }
                 Err(e) => {
-                    let error_msg = format!("Stream error: {}", e);
+                    let error_msg = format!("Stream error: {e}");
                     tracing::error!(%filename, "Error reading upload stream: {}", e);
                     let _ = tx.send(Err(e)).await;
                     let _ = complete_tx.send(Err(error_msg));
@@ -151,7 +150,7 @@ async fn upload_handler(
     // Wait for the upload to complete before returning response
     match complete_rx.await {
         Ok(Ok(())) => (StatusCode::OK, "Upload completed successfully").into_response(),
-        Ok(Err(e)) => (StatusCode::BAD_REQUEST, format!("Upload failed: {}", e)).into_response(),
+        Ok(Err(e)) => (StatusCode::BAD_REQUEST, format!("Upload failed: {e}")).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Upload task failed").into_response(),
     }
 }
