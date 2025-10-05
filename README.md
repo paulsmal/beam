@@ -73,17 +73,3 @@ The application uses:
 ```bash
 cargo test
 ```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Security Considerations
-
-This is a prototype implementation. For production use, consider adding:
-- Persistent credential storage beyond the in-memory map
-- Role-based authorization and audit logging
-- Rate limiting and abuse prevention
-- File size limits and stricter streaming guards
-- HTTPS termination and secure password policies
-- Input validation for filenames
