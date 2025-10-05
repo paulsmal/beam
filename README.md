@@ -23,27 +23,32 @@ cargo run
 ./target/release/beam
 ```
 
-The server will start on `http://0.0.0.0:3000`
+The server will start on `http://0.0.0.0:4000`
 
-#### Dashboard
-- **GET** `/` - Shows list of active streams
-
-#### File Streaming
-- **PUT** `/{filename}` - Upload a file (waits for download client before streaming)
-- **GET** `/{filename}` - Download the streaming file
+#### Endpoints
+- **GET** `/` - Shows active streams and tokens
+- **POST** `/token` - Generate a new authentication token
+- **PUT** `/{token}/{filename}` - Upload a file (waits for download client)
+- **GET** `/{token}/{filename}` - Download the streaming file
 
 ### Example Usage
 
-Using curl in two separate terminals:
+First, generate a token:
+```bash
+TOKEN=$(curl -X POST http://localhost:4000/token)
+echo "Token: $TOKEN"
+```
+
+Then use the token for upload and download in separate terminals:
 
 **Terminal 1 (Uploader):**
 ```bash
-curl -T myfile.zip http://localhost:3000/myfile.zip
+curl -T myfile.zip http://localhost:4000/$TOKEN/myfile.zip
 ```
 
 **Terminal 2 (Downloader):**
 ```bash
-curl http://localhost:3000/myfile.zip > myfile.zip
+curl http://localhost:4000/$TOKEN/myfile.zip > myfile.zip
 ```
 
 The file will stream directly from the uploader to the downloader.
@@ -56,13 +61,26 @@ The application uses:
 - **Broadcast channels**: For streaming data between upload and download handlers
 - **DashMap**: Thread-safe concurrent HashMap for managing active streams
 
+## Features
+
+- **Token-based authentication**: Secure access with short-lived tokens
+- **Automatic token extension**: Tokens extend while actively streaming
+- **Token cleanup**: Expired tokens are automatically removed
+- **Stream isolation**: Each token's uploads/downloads are isolated
+
+## Token Lifecycle
+
+- Initial lifetime: 20 minutes
+- Extended by 5 minutes on each use
+- Tokens expire if unused
+- Active streams keep tokens alive
+
 ## Limitations
 
-- No authentication or authorization
 - No persistent storage - files only exist during active streaming
-- One upload per filename at a time (returns 409 Conflict for concurrent uploads)
+- One upload per filename per token at a time
 - No resume capability for interrupted transfers
-- Upload waits indefinitely for a download client to connect
+- Upload waits up to 5 minutes for a download client to connect
 
 ### Running tests
 
